@@ -42,6 +42,8 @@ services:
                       ./BUMessenger.Web.Api"
     volumes:
       - ./logs:/app/logs
+    ports:
+      - 8002:8080
     networks:
       - bum_backend_net
 
