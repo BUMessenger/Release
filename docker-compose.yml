@@ -1,0 +1,71 @@
+networks:
+  bum_backend_net:
+    driver: bridge
+    name: bum_backend_net
+
+services:
+  postgres:
+    image: postgres:17.4
+    container_name: bumessenger-postgres
+    env_file: settings.conf
+    environment:
+      POSTGRES_DB: bumessenger
+      POSTGRES_USER: postgres
+    healthcheck:
+      test: bash -c "pg_isready -U postgres -d bumessenger"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    volumes:
+      - ./settings.conf:/settings.conf
+      - /var/lib/postgresql/dataBumessenger:/var/lib/postgresql/data
+    networks:
+      - bum_backend_net
+
+  backend:
+    image: bumessenger-backend:latest
+    container_name: bumessenger-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: settings.conf
+    environment:
+      DOCKER_CONNECTION_STRING: Host=postgres;Port=5432;Database=bumessenger;Username=postgres;Password=
+    command: bash -c "export DOCKER_CONNECTION_STRING=$${DOCKER_CONNECTION_STRING}$${POSTGRES_PASSWORD}; 
+                      export EmailSettings__SmtpServer=$${SYSMAIL_DOMAIN};
+                      export EmailSettings__Port=$${SYSMAIL_PORT};
+                      export EmailSettings__UseSsl=$${SYSMAIL_SSL};
+                      export EmailSettings__Username=$${SYSMAIL_LOGIN};
+                      export EmailSettings__Password=$${SYSMAIL_PASSWORD};
+                      export EmailSettings__FromName=$${SYSMAIL_USERNAME};
+                      export EmailSettings__FromAddress=$${SYSMAIL_LOGIN}; 
+                      ./BUMessenger.Web.Api"
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - bum_backend_net
+
+  pgadmin:
+    image: dpage/pgadmin4:9.0
+    depends_on:
+      postgres:
+        condition: service_healthy
+    container_name: bumessenger-pgadmin
+    env_file: settings.conf
+    ports:
+      - 3001:80
+    volumes:
+      - ./pgadmin4/servers.json:/pgadmin4/servers.json
+      - ./settings.conf:/settings.conf
+    networks:
+      - bum_backend_net
+
+  frontend:
+    image: bumessenger-frontend:latest
+    container_name: bumessenger-frontend
+    command: npm run dev
+    ports:
+      - 80:5173
+    networks:
+      - bum_backend_net
