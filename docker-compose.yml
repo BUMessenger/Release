@@ -24,7 +24,7 @@ services:
       - bum_backend_net
 
   backend:
-    image: bumessenger-backend:latest
+    image: bumessenger/backend:latest
     container_name: bumessenger-backend
     depends_on:
       postgres:
@@ -62,10 +62,10 @@ services:
       - bum_backend_net
 
   frontend:
-    image: bumessenger-frontend:latest
+    image: bumessenger/frontend:latest
     container_name: bumessenger-frontend
     command: npm run dev
     ports:
-      - 80:5173
+      - 8001:5173
     networks:
       - bum_backend_net
